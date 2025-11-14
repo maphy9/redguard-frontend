@@ -7,6 +7,7 @@ import { ClauseImprovement } from "./components/ClauseImprovement";
 import { ComparisonMode } from "./components/ComparisonMode";
 import { AuditReport } from "./components/AuditReport";
 import "./styles/globals.css";
+import Header from "./components/layout/Header";
 
 // import redHatLogo from "figma:asset/47e290391f04b200e62d1fb113da9b4822230f53.png";
 
@@ -20,80 +21,31 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-[#0f0f0f]">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#EE0000] rounded-sm flex items-center justify-center">
-                <div className="w-5 h-5 bg-white rounded-sm transform rotate-12"></div>
-              </div>
-              <div>
-                <h1 className="text-white">AI Contract Risk Analyzer</h1>
-                <p className="text-gray-400 text-sm">Powered by Red Hat AI</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <nav className="flex items-center gap-6">
-                <button className="text-gray-300 hover:text-white transition-colors">
-                  Dashboard
-                </button>
-                <button className="text-gray-300 hover:text-white transition-colors">
-                  Reports
-                </button>
-              </nav>
-              <button className="px-4 py-2 bg-[#EE0000] text-white rounded hover:bg-[#CC0000] transition-colors">
-                Log out
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#0D0D0F] text-white">
+      <Header></Header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-2 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-[#1a1a1a] border border-gray-800 mb-8">
-            <TabsTrigger
-              value="upload"
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white"
-            >
-              Upload
-            </TabsTrigger>
-            <TabsTrigger
-              value="dashboard"
-              disabled={!hasDocument}
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white disabled:opacity-50"
-            >
+          <TabsList className="grid grid-cols-6">
+            <TabsTrigger value="upload">Upload</TabsTrigger>
+
+            <TabsTrigger value="dashboard" disabled={!hasDocument}>
               Dashboard
             </TabsTrigger>
-            <TabsTrigger
-              value="viewer"
-              disabled={!hasDocument}
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white disabled:opacity-50"
-            >
+
+            <TabsTrigger value="viewer" disabled={!hasDocument}>
               Document Viewer
             </TabsTrigger>
-            <TabsTrigger
-              value="improvement"
-              disabled={!hasDocument}
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white disabled:opacity-50"
-            >
+
+            <TabsTrigger value="improvement" disabled={!hasDocument}>
               Improvements
             </TabsTrigger>
-            <TabsTrigger
-              value="comparison"
-              disabled={!hasDocument}
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white disabled:opacity-50"
-            >
+
+            <TabsTrigger value="comparison" disabled={!hasDocument}>
               Comparison
             </TabsTrigger>
-            <TabsTrigger
-              value="report"
-              disabled={!hasDocument}
-              className="data-[state=active]:bg-[#EE0000] data-[state=active]:text-white disabled:opacity-50"
-            >
+
+            <TabsTrigger value="report" disabled={!hasDocument}>
               Audit Report
             </TabsTrigger>
           </TabsList>
