@@ -6,7 +6,9 @@ import { RiskDashboard } from "./components/RiskDashboard";
 import { ClauseImprovement } from "./components/ClauseImprovement";
 import { ComparisonMode } from "./components/ComparisonMode";
 import { AuditReport } from "./components/AuditReport";
-import redHatLogo from "figma:asset/47e290391f04b200e62d1fb113da9b4822230f53.png";
+import "./styles/globals.css";
+
+// import redHatLogo from "figma:asset/47e290391f04b200e62d1fb113da9b4822230f53.png";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("upload");
