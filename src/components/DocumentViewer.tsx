@@ -265,13 +265,13 @@ export function DocumentViewer() {
                   <p className="text-gray-300 text-sm leading-relaxed mb-4">
                     {selectedRiskData.suggestion}
                   </p>
-                  <Button className="w-full bg-[#EE0000] hover:bg-[#CC0000] text-white">
+                  {/* <Button className="w-full bg-[#EE0000] hover:bg-[#CC0000] text-white">
                     Generate Improved Version
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button
                     variant="outline"
                     className="flex-1 bg-transparent border-gray-700 text-white hover:bg-gray-800"
@@ -279,7 +279,7 @@ export function DocumentViewer() {
                     <ExternalLink className="w-4 h-4 mr-2" />
                     View in Context
                   </Button>
-                </div>
+                </div> */}
               </div>
             ) : (
               <div className="text-center py-12">

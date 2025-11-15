@@ -19,6 +19,9 @@ export default function App() {
     setHasDocument(true);
     setActiveTab("dashboard");
   };
+  const handleSwitchToViewer = () => {
+    setActiveTab("viewer");
+  };
 
   return (
     <div className="min-h-screen bg-[#0D0D0F] text-white">
@@ -55,7 +58,7 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="dashboard">
-            <RiskDashboard />
+            <RiskDashboard handleSwitchToViewer={handleSwitchToViewer} />
           </TabsContent>
 
           <TabsContent value="viewer">
