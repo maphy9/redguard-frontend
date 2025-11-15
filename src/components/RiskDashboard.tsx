@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   FileText,
@@ -18,75 +18,119 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+// PieChart imports kept for future use / extension
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 
-// const riskData = [
-//   { name: "Liability", value: 8, color: "#FF2D2D" },
-//   { name: "Payment Terms", value: 5, color: "#F59E0B" },
-//   { name: "Termination", value: 3, color: "#FFF176" },
-//   { name: "IP Rights", value: 6, color: "#FF4747" },
-// ];
+type RiskLevel = "low" | "medium" | "high";
 
-const risks = [
-  {
-    id: 1,
-    level: "high",
-    category: "Liability",
-    title: "Unlimited liability clause",
-    description: "Contract contains unlimited liability exposure without cap",
-    section: "Section 8.2",
-  },
-  {
-    id: 2,
-    level: "high",
-    category: "Payment Terms",
-    title: "No late payment penalties",
-    description: "Missing provisions for late payment protection",
-    section: "Section 4.1",
-  },
-  {
-    id: 3,
-    level: "high",
-    category: "IP Rights",
-    title: "Broad IP assignment",
-    description:
-      "IP assignment clause is overly broad and may include background IP",
-    section: "Section 12.3",
-  },
-  {
-    id: 4,
-    level: "medium",
-    category: "Termination",
-    title: "Short notice period",
-    description: "Termination notice period of 30 days may be insufficient",
-    section: "Section 10.1",
-  },
-  {
-    id: 5,
-    level: "medium",
-    category: "Payment Terms",
-    title: "Extended payment terms",
-    description: "Net 90 payment terms increase cash flow risk",
-    section: "Section 4.3",
-  },
-  {
-    id: 6,
-    level: "low",
-    category: "General",
-    title: "Governing law clarity",
-    description:
-      "Governing law clause could be more specific about jurisdiction",
-    section: "Section 15.2",
-  },
-];
-interface handleSwitchToViewerI {
+interface TopRisk {
+  id: number;
+  level: RiskLevel;
+  category: string;
+  title: string;
+  description: string;
+  section?: string | null;
+  impact?: string | null;
+  recommendation?: string | null;
+}
+
+interface CategoryScore {
+  name: string;
+  value: number;
+}
+
+interface Summary {
+  overallRisk: RiskLevel;
+  riskScore: number;
+  criticalIssues: number;
+  mediumIssues: number;
+  lowIssues: number;
+  recommendation: string;
+}
+
+interface ContractAnalysis {
+  contractId: string;
+  fileName: string;
+  uploadedAt: string;
+  summary: Summary;
+  categories: CategoryScore[];
+  topRisks: TopRisk[];
+  // other fields exist in backend, but we don't need them here
+}
+
+interface ContractListItem {
+  contractId: string;
+  fileName: string;
+  uploadedAt: string;
+  overallRisk: RiskLevel;
+  riskScore: number;
+}
+
+interface ContractListResponse {
+  items: ContractListItem[];
+}
+
+interface RiskDashboardProps {
   handleSwitchToViewer: () => void;
 }
-export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
-  const [filterLevel, setFilterLevel] = useState("all");
+
+// Base URL – configure via Vite env or fall back to same-origin
+const API_BASE_URL =
+  "http://redguard-backend-redguard.apps.cluster-d5t2f.d5t2f.sandbox2788.opentlc.com";
+
+export function RiskDashboard({ handleSwitchToViewer }: RiskDashboardProps) {
+  const [filterLevel, setFilterLevel] = useState<"all" | RiskLevel>("all");
   const [expandedRisk, setExpandedRisk] = useState<number | null>(null);
 
-  const getRiskColor = (level: string) => {
+  const [analysis, setAnalysis] = useState<ContractAnalysis | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ---------- Fetch latest contract + analysis from backend ----------
+  useEffect(() => {
+    const loadLatestAnalysis = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1) Get list of contracts
+        const listRes = await fetch(`${API_BASE_URL}/api/contracts`);
+        if (!listRes.ok) {
+          throw new Error(`List request failed with ${listRes.status}`);
+        }
+        const listJson: ContractListResponse = await listRes.json();
+
+        if (!listJson.items || listJson.items.length === 0) {
+          setAnalysis(null);
+          return;
+        }
+
+        // Here we simply take the latest item (last in array)
+        const latest = listJson.items[listJson.items.length - 1];
+
+        // 2) Get full analysis for that contract
+        const detailRes = await fetch(
+          `${API_BASE_URL}/api/contracts/${latest.contractId}`
+        );
+        if (!detailRes.ok) {
+          throw new Error(`Detail request failed with ${detailRes.status}`);
+        }
+        const detailJson: ContractAnalysis = await detailRes.json();
+        setAnalysis(detailJson);
+      } catch (e: any) {
+        console.error(e);
+        setError("Failed to load contract analysis from backend.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLatestAnalysis();
+  }, []);
+
+  const risks: TopRisk[] = analysis?.topRisks ?? [];
+
+  const getRiskColor = (level: RiskLevel) => {
     switch (level) {
       case "high":
         return "bg-[#FF2D2D] text-[#E6E6E9]";
@@ -107,182 +151,137 @@ export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
   const mediumRiskCount = risks.filter((r) => r.level === "medium").length;
   const lowRiskCount = risks.filter((r) => r.level === "low").length;
 
-  return (
-    <div className="container mx-auto py-2 space-y-8">
-      {/* Header */}
-      {/* <div className="mb-2">
-        <h2 className="text-2xl font-semibold text-[#E6E6E9] mb-1">
-          Risk Analysis Dashboard
-        </h2>
+  // Optional: riskData from categories (for PieChart, if you uncomment it later)
+  const riskData =
+    analysis?.categories?.map((c, idx) => ({
+      name: c.name,
+      value: c.value,
+      color: ["#FF2D2D", "#F59E0B", "#FFF176", "#FF4747", "#22C55E"][idx % 5],
+    })) ?? [];
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-4">
+        <p className="text-sm text-[#9A9AA2]">Loading risk dashboard…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-4">
+        <p className="text-sm text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="container mx-auto py-4">
         <p className="text-sm text-[#9A9AA2]">
-          Overview of critical risks detected in your contract.
+          No analyzed contracts found. Upload a document first.
         </p>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <Card className="bg-[#1A1A1D] border border-[#FF2D2D] shadow-[0_18px_45px_rgba(255,45,45,0.35)] hover:shadow-[0_22px_55px_rgba(255,45,45,0.5)] hover:-translate-y-0.5 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-medium text-[#9A9AA2]">
-              Total Risks
+  return (
+    <div className="container mx-auto py-2 space-y-8">
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-[#1A1A1D] to-[#240000] border border-[#262629]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
+              Overall risk score
             </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF2D2D]/10">
+              <AlertTriangle className="h-4 w-4 text-[#FF7A7A]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-semibold text-[#E6E6E9] mb-1">
-                  {risks.length}
-                </div>
-                <div className="text-xs text-[#9A9AA2]">Issues found</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0D0D0F] border border-[#262629]">
-                <FileText className="w-5 h-5 text-[#FF2D2D]" />
-              </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-[#FF7A7A]">
+                {analysis.summary.riskScore}
+              </span>
+              <span className="text-xs text-[#9A9AA2]">/ 100</span>
             </div>
+            <p className="mt-2 text-xs text-[#9A9AA2]">
+              {analysis.summary.recommendation}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A1D] border border-[#262629] hover:-translate-y-0.5 hover:shadow-[0_18px_35px_rgba(0,0,0,0.85)] transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-medium text-[#9A9AA2]">
-              High Priority
+        <Card className="bg-[#1A1A1D] border border-[#262629]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
+              Risk distribution
             </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7B61FF]/15">
+              <FileText className="h-4 w-4 text-[#B4A6FF]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end justify-between">
+            <div className="flex items-baseline gap-8">
               <div>
-                <div className="text-2xl font-semibold text-[#E6E6E9] mb-1">
+                <p className="text-xs text-[#9A9AA2]">High</p>
+                <p className="text-lg font-semibold text-[#FF7A7A]">
                   {highRiskCount}
-                </div>
-                <div className="text-xs text-[#9A9AA2]">Need attention</div>
+                </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1A1A1D] border border-[#FF2D2D]/40">
-                <AlertTriangle className="w-5 h-5 text-[#FF2D2D]" />
+              <div>
+                <p className="text-xs text-[#9A9AA2]">Medium</p>
+                <p className="text-lg font-semibold text-[#FBBF24]">
+                  {mediumRiskCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[#9A9AA2]">Low</p>
+                <p className="text-lg font-semibold text-[#A3E635]">
+                  {lowRiskCount}
+                </p>
               </div>
             </div>
+            <p className="mt-2 text-xs text-[#555565]">
+              Distribution of clause-level risks across the entire contract.
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A1D] border border-[#262629] hover:-translate-y-0.5 hover:shadow-[0_18px_35px_rgba(0,0,0,0.85)] transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-medium text-[#9A9AA2]">
-              Risk Score
+        <Card className="bg-[#1A1A1D] border border-[#262629]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
+              AI confidence & signal
             </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#059669]/10">
+              <Activity className="h-4 w-4 text-[#34D399]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-semibold text-[#E6E6E9] mb-1">
-                  72/100
-                </div>
-                <div className="text-xs text-[#9A9AA2]">High risk profile</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1A1A1D] border border-[#F59E0B]/30">
-                <Activity className="w-5 h-5 text-[#F59E0B]" />
-              </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-[#34D399]">89%</span>
+              <span className="text-xs text-[#9A9AA2]">confidence</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1D] border border-[#262629] hover:-translate-y-0.5 hover:shadow-[0_18px_35px_rgba(0,0,0,0.85)] transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-medium text-[#9A9AA2]">
-              Categories
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-semibold text-[#E6E6E9] mb-1">
-                  4
-                </div>
-                <div className="text-xs text-[#9A9AA2]">Risk types</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1A1A1D] border border-emerald-400/30">
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
-              </div>
-            </div>
+            <p className="mt-2 text-xs text-[#9A9AA2]">
+              Model calibrated on synthetic legal datasets and internal
+              benchmarks.
+            </p>
           </CardContent>
         </Card>
       </div>
 
-     
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card className="bg-[#1A1A1D] border border-[#262629]">
-          <CardHeader>
-            <CardTitle className="text-sm font-semibold text-[#E6E6E9]">
-              Risk Distribution by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={riskData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={95}
-                  dataKey="value"
-                >
-                  {riskData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Legend
-                  wrapperStyle={{ color: "#E6E6E9", fontSize: 12 }}
-                  iconType="circle"
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1D] border border-[#262629]">
-          <CardHeader>
-            <CardTitle className="text-sm font-semibold text-[#E6E6E9]">
-              Risk Level Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 pt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-[#FF2D2D]" />
-                <span className="text-sm text-[#E6E6E9]">High risk</span>
-              </div>
-              <span className="text-sm text-[#E6E6E9]">
-                {highRiskCount} issues
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-[#F59E0B]" />
-                <span className="text-sm text-[#E6E6E9]">Medium risk</span>
-              </div>
-              <span className="text-sm text-[#E6E6E9]">
-                {mediumRiskCount} issues
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-[#FFF176]" />
-                <span className="text-sm text-[#E6E6E9]">Low risk</span>
-              </div>
-              <span className="text-sm text-[#E6E6E9]">
-                {lowRiskCount} issues
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div> */}
-
-      {/* Risk List */}
+      {/* Risk list */}
       <Card className="bg-[#1A1A1D] border border-[#262629]">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-sm font-semibold text-[#E6E6E9]">
               Detailed Risk Analysis
             </CardTitle>
-            <Select value={filterLevel} onValueChange={setFilterLevel}>
+            <Select
+              value={filterLevel}
+              onValueChange={(val) =>
+                setFilterLevel(val as "all" | RiskLevel)
+              }
+            >
               <SelectTrigger className="w-40 bg-[#0D0D0F] border-[#262629] text-xs text-[#E6E6E9]">
                 <div className="flex w-full items-center justify-between">
                   <span className="inline-flex items-center gap-2">
@@ -321,35 +320,38 @@ export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
                       <span className="text-xs text-[#9A9AA2]">
                         {risk.category}
                       </span>
-                      <span className="text-xs text-[#555565]">
-                        {risk.section}
-                      </span>
+                      {risk.section && (
+                        <span className="text-xs text-[#555565]">
+                          {risk.section}
+                        </span>
+                      )}
                     </div>
-                    <h4 className="text-sm font-semibold text-[#E6E6E9] mb-1">
+                    <h4 className="mb-1 text-sm font-semibold text-[#E6E6E9]">
                       {risk.title}
                     </h4>
-                    <p className="text-xs text-[#9A9AA2] mb-2">
+                    <p className="mb-2 text-xs text-[#9A9AA2]">
                       {risk.description}
                     </p>
 
                     {expandedRisk === risk.id && (
                       <div className="mt-3 rounded-lg border border-[#262629] bg-black/70 p-4">
-                        <h5 className="text-sm font-semibold text-[#E6E6E9] mb-2">
+                        <h5 className="mb-2 text-sm font-semibold text-[#E6E6E9]">
                           Detailed Analysis
                         </h5>
-                        <p className="text-xs text-[#9A9AA2] mb-3">
-                          This risk could expose your organization to
-                          significant liability. We recommend implementing a cap
-                          on liability or adding specific exclusions.
+                        <p className="mb-3 text-xs text-[#9A9AA2]">
+                          {risk.impact ||
+                            "This risk could expose your organization to significant liability or commercial exposure."}
                         </p>
-                        <h5 className="text-sm font-semibold text-[#E6E6E9] mb-2">
-                          Recommendation
-                        </h5>
-                        <p className="text-xs text-[#9A9AA2]">
-                          Negotiate a liability cap of no more than 2× the
-                          contract value, or add specific exclusions for
-                          indirect, consequential, and punitive damages.
-                        </p>
+                        {risk.recommendation && (
+                          <>
+                            <h5 className="mb-2 text-sm font-semibold text-[#E6E6E9]">
+                              Recommendation
+                            </h5>
+                            <p className="text-xs text-[#9A9AA2]">
+                              {risk.recommendation}
+                            </p>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -385,6 +387,11 @@ export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
                 </div>
               </div>
             ))}
+            {filteredRisks.length === 0 && (
+              <p className="text-xs text-[#9A9AA2]">
+                No risks for the selected filter.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

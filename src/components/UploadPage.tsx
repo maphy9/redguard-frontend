@@ -3,15 +3,26 @@ import { Upload, FileText, Shield, Check } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 
-interface UploadPageProps {
-  onDocumentUploaded: () => void;
+interface ContractAnalysis {
+  contractId: string;
+  fileName: string;
+  uploadedAt: string;
+  // other fields exist, but we don't need them here
+  [key: string]: any;
 }
+
+interface UploadPageProps {
+  onDocumentUploaded: (analysis: ContractAnalysis) => void;
+}
+
+const API_BASE_URL="http://redguard-backend-redguard.apps.cluster-d5t2f.d5t2f.sandbox2788.opentlc.com";
 
 export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -28,6 +39,7 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       setFile(droppedFile);
+      setError(null);
     }
   };
 
@@ -35,25 +47,51 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+      setError(null);
     }
   };
 
-  const handleAnalyze = () => {
-    setIsUploading(true);
-    setUploadProgress(0);
+  const handleAnalyze = async () => {
+    if (!file) {
+      setError("Please select a file first.");
+      return;
+    }
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            onDocumentUploaded();
-          }, 500);
-          return 100;
-        }
-        return prev + 10;
+    setIsUploading(true);
+    setUploadProgress(10);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // POST to backend /api/contracts/analyze
+      const res = await fetch(`${API_BASE_URL}/api/contracts/analyze`, {
+        method: "POST",
+        body: formData,
       });
-    }, 200);
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          `Analyze failed (${res.status}): ${text || res.statusText}`
+        );
+      }
+
+      // Simulate a bit of progress while parsing
+      setUploadProgress(70);
+      const analysis: ContractAnalysis = await res.json();
+      setUploadProgress(100);
+
+      // Pass full analysis up to parent (App)
+      onDocumentUploaded(analysis);
+    } catch (e: any) {
+      console.error(e);
+      setError("Failed to analyze document. Please try again.");
+      setUploadProgress(0);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -157,6 +195,11 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
           </div>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="mb-4 text-xs text-red-400 text-center">{error}</div>
+        )}
+
         {/* Upload Progress */}
         {isUploading && (
           <div className="mb-8">
@@ -185,39 +228,40 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
     </div>
   );
 }
+
 function HoloScanOverlay({ active }: { active: boolean }) {
   if (!active) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
-      {/* central red vignette – jak na mockupie */}
+      {/* central red vignette */}
       <div
         className="absolute inset-0 opacity-90 mix-blend-screen
                    bg-[radial-gradient(circle_at_center,_rgba(255,45,45,0.55),_rgba(13,13,15,0.4)_55%,_rgba(13,13,15,0.95)_100%)]"
       />
 
-      {/* mocniejszy pionowy laser */}
+      {/* vertical laser */}
       <div
         className="holo-scan-line absolute top-0 left-1/2 h-[55%] w-[72%]
                    -translate-x-1/2 rounded-full
                    bg-[radial-gradient(circle_at_center,_rgba(255,71,71,0.9),_rgba(255,45,45,0.1)_60%,_transparent_100%)]"
       />
 
-      {/* główny pierścień wokół ikony */}
+      {/* outer ring */}
       <div
         className="holo-ring absolute left-1/2 top-[44%] h-48 w-48 -translate-x-1/2 rounded-full
                    border border-[#FF2D2D]/70
                    shadow-[0_0_120px_rgba(255,45,45,0.85)]"
       />
 
-      {/* wewnętrzny ring dla głębi */}
+      {/* inner ring */}
       <div
         className="absolute left-1/2 top-[44%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full
                    border border-[#FF7A7A]/50
                    shadow-[0_0_60px_rgba(255,71,71,0.7)] opacity-80"
       />
 
-      {/* bardziej widoczny przepływ danych */}
+      {/* data flow line */}
       <div
         className="holo-data-flow absolute bottom-8 left-8 right-8 h-[2px]
                    bg-gradient-to-r from-transparent via-[#FF2D2D] to-transparent
