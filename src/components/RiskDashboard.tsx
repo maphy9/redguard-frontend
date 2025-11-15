@@ -20,12 +20,12 @@ import {
 } from "./ui/select";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 
-const riskData = [
-  { name: "Liability", value: 8, color: "#FF2D2D" },
-  { name: "Payment Terms", value: 5, color: "#F59E0B" },
-  { name: "Termination", value: 3, color: "#FFF176" },
-  { name: "IP Rights", value: 6, color: "#FF4747" },
-];
+// const riskData = [
+//   { name: "Liability", value: 8, color: "#FF2D2D" },
+//   { name: "Payment Terms", value: 5, color: "#F59E0B" },
+//   { name: "Termination", value: 3, color: "#FFF176" },
+//   { name: "IP Rights", value: 6, color: "#FF4747" },
+// ];
 
 const risks = [
   {
@@ -106,9 +106,9 @@ export function RiskDashboard() {
   const lowRiskCount = risks.filter((r) => r.level === "low").length;
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-2 space-y-8">
       {/* Header */}
-      <div className="mb-2">
+      {/* <div className="mb-2">
         <h2 className="text-2xl font-semibold text-[#E6E6E9] mb-1">
           Risk Analysis Dashboard
         </h2>
@@ -117,7 +117,6 @@ export function RiskDashboard() {
         </p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <Card className="bg-[#1A1A1D] border border-[#FF2D2D] shadow-[0_18px_45px_rgba(255,45,45,0.35)] hover:shadow-[0_22px_55px_rgba(255,45,45,0.5)] hover:-translate-y-0.5 transition-all">
           <CardHeader className="pb-3">
@@ -204,7 +203,7 @@ export function RiskDashboard() {
         </Card>
       </div>
 
-      {/* Charts */}
+     
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="bg-[#1A1A1D] border border-[#262629]">
           <CardHeader>
@@ -272,7 +271,7 @@ export function RiskDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Risk List */}
       <Card className="bg-[#1A1A1D] border border-[#262629]">

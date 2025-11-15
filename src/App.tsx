@@ -26,7 +26,7 @@ export default function App() {
 
       <main className="container mx-auto px-2 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-6">
+          <TabsList className="grid grid-cols-3">
             <TabsTrigger value="upload">Upload</TabsTrigger>
 
             <TabsTrigger value="dashboard" disabled={!hasDocument}>
@@ -37,7 +37,7 @@ export default function App() {
               Document Viewer
             </TabsTrigger>
 
-            <TabsTrigger value="improvement" disabled={!hasDocument}>
+            {/* <TabsTrigger value="improvement" disabled={!hasDocument}>
               Improvements
             </TabsTrigger>
 
@@ -47,7 +47,7 @@ export default function App() {
 
             <TabsTrigger value="report" disabled={!hasDocument}>
               Audit Report
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="upload">
