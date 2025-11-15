@@ -363,7 +363,7 @@ export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
                           expandedRisk === risk.id ? null : risk.id
                         )
                       }
-                      className="border-[#262629] bg-transparent text-xs text-[#E6E6E9] hover:bg-[#1A1A1D]"
+                      className="border-[#262629] bg-transparent text-xs text-[#E6E6E9] hover:bg-[#1A1A1D] hover:text-white"
                     >
                       {expandedRisk === risk.id ? "Hide details" : "Details"}
                       <ChevronDown
@@ -376,7 +376,7 @@ export function RiskDashboard({ handleSwitchToViewer }: handleSwitchToViewerI) {
                       onClick={handleSwitchToViewer}
                       variant="outline"
                       size="sm"
-                      className="border-[#262629] bg-transparent text-xs text-[#E6E6E9] hover:bg-[#1A1A1D]"
+                      className="border-[#262629] bg-transparent text-xs text-[#E6E6E9] hover:bg-[#1A1A1D] hover:text-white"
                     >
                       View in doc
                       <ExternalLink className="ml-1 h-4 w-4" />
