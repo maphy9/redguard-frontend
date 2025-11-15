@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type JSX } from "react";
+import { useEffect, useState, useRef, type JSX } from "react";
 import { AlertTriangle, ChevronRight, Lightbulb } from "lucide-react";
 import { motion, useAnimation } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -6,125 +6,106 @@ import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "../utils/utils";
 
-const documentText = `SERVICE AGREEMENT
+/* -----------------------------------------
+   Type definitions
+------------------------------------------ */
 
-This Service Agreement ("Agreement") is entered into as of January 1, 2024 ("Effective Date") by and between TechCorp Solutions Inc. ("Provider") and Client Company LLC ("Client").
+type RiskLevel = "low" | "medium" | "high";
 
-1. SERVICES
-Provider agrees to provide software development services as outlined in Statement of Work documents.
+interface IssueDetail {
+  id: string;
+  type: string;
+  severity: RiskLevel;
+  snippet: string;
+  explanation: string;
+  suggestedFix?: string;
+}
 
-2. PAYMENT TERMS
-2.1 Client shall pay Provider within 90 days of invoice date.
-2.2 All payments shall be made in US Dollars.
-2.3 Late payments may incur interest charges.
+interface Section {
+  id: string;
+  heading?: string;
+  text: string;
+  riskLevel: RiskLevel;
+  issues: IssueDetail[];
+}
 
-3. INTELLECTUAL PROPERTY
-3.1 All intellectual property created during the engagement, including but not limited to source code, documentation, designs, and any derivative works, shall be assigned to Client.
-3.2 Provider hereby assigns all rights, title, and interest in such intellectual property.
+interface DocumentData {
+  title?: string;
+  sections: Section[];
+}
 
-4. LIABILITY
-4.1 Provider shall be liable for any and all damages arising from this agreement without limitation.
-4.2 Client may seek remedies for any breach or negligence.
+interface Summary {
+  overallRisk: RiskLevel;
+  riskScore: number;
+}
 
-5. TERMINATION
-5.1 Either party may terminate this agreement with 30 days written notice.
-5.2 Upon termination, all outstanding payments become immediately due.
+interface ContractAnalysis {
+  contractId: string;
+  fileName: string;
+  uploadedAt: string;
+  document: DocumentData;
+  summary: Summary;
+}
 
-6. CONFIDENTIALITY
-6.1 Both parties agree to maintain confidentiality of proprietary information.
-6.2 This obligation survives termination of the agreement.
+interface ContractListItem {
+  contractId: string;
+  fileName: string;
+  uploadedAt: string;
+  overallRisk: RiskLevel;
+  riskScore: number;
+}
 
-7. GOVERNING LAW
-This agreement shall be governed by the laws of the State of Delaware.`;
+interface ContractListResponse {
+  items: ContractListItem[];
+}
 
-const highlights = [
-  {
-    start: 428,
-    end: 488,
-    level: "medium",
-    text: "Client shall pay Provider within 90 days of invoice date",
-    riskId: 1,
-  },
-  {
-    start: 782,
-    end: 960,
-    level: "high",
-    text: "All intellectual property created during the engagement, including but not limited to source code, documentation, designs, and any derivative works, shall be assigned to Client",
-    riskId: 2,
-  },
-  {
-    start: 1107,
-    end: 1215,
-    level: "high",
-    text: "Provider shall be liable for any and all damages arising from this agreement without limitation",
-    riskId: 3,
-  },
-  {
-    start: 1347,
-    end: 1417,
-    level: "medium",
-    text: "Either party may terminate this agreement with 30 days written notice",
-    riskId: 4,
-  },
-];
+/* -----------------------------------------
+   Highlight type
+------------------------------------------ */
 
-const riskDetails = {
-  1: {
-    category: "Payment Terms",
-    level: "medium",
-    title: "Extended Payment Terms",
-    explanation:
-      "Net 90 payment terms significantly increase cash flow risk and may impact operational sustainability.",
-    suggestion:
-      "Recommend negotiating Net 30 or Net 45 terms, or implementing milestone-based payments.",
-  },
-  2: {
-    category: "IP Rights",
-    level: "high",
-    title: "Broad IP Assignment",
-    explanation:
-      "The current clause assigns ALL intellectual property, which may include pre-existing background IP and tools that Provider uses across multiple clients.",
-    suggestion:
-      'Limit assignment to "foreground IP" specifically created for this project, excluding pre-existing tools and methodologies.',
-  },
-  3: {
-    category: "Liability",
-    level: "high",
-    title: "Unlimited Liability",
-    explanation:
-      "Accepting unlimited liability exposure is extremely risky and could result in catastrophic financial consequences.",
-    suggestion:
-      "Cap liability at 2x the contract value or implement specific exclusions for indirect and consequential damages.",
-  },
-  4: {
-    category: "Termination",
-    level: "medium",
-    title: "Short Notice Period",
-    explanation:
-      "30 days may be insufficient for resource planning and transition of ongoing work.",
-    suggestion:
-      "Negotiate 60-90 day notice period for termination without cause, with shorter period allowed for material breach.",
-  },
-};
+interface Highlight {
+  start: number;
+  end: number;
+  level: RiskLevel;
+  text: string;
+  riskId: string;
+  issue: IssueDetail;
+}
 
-export function DocumentViewer({
-  highlightSection,
-}: {
-  highlightSection?: string;
-}) {
-  const [selectedRisk, setSelectedRisk] = useState<number | null>(1);
+/* -----------------------------------------
+   API base URL
+------------------------------------------ */
+
+const API_BASE_URL =
+  "http://redguard-backend-redguard.apps.cluster-d5t2f.d5t2f.sandbox2788.opentlc.com";
+
+/* -----------------------------------------
+   Component
+------------------------------------------ */
+
+export function DocumentViewer() {
+  const [analysis, setAnalysis] = useState<ContractAnalysis | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [documentText, setDocumentText] = useState<string>("");
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
 
   // --- SCAN ANIMATION STATE ---
   const [scanning, setScanning] = useState(false);
-  const [activeHighlightIds, setActiveHighlightIds] = useState<number[]>([]);
+  const [activeHighlightIds, setActiveHighlightIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const scannerAnimation = useAnimation();
+  const scanDuration = 3; // seconds
 
-  const scanDuration = 3; // sek
+  /* -----------------------------------------
+     Helpers
+  ------------------------------------------ */
 
-  const getRiskColor = (level: string) => {
+  const getRiskColor = (level: RiskLevel) => {
     switch (level) {
       case "high":
         return "bg-[#FF3B3B]/55";
@@ -137,7 +118,7 @@ export function DocumentViewer({
     }
   };
 
-  const getBadgeColor = (level: string) => {
+  const getBadgeColor = (level: RiskLevel) => {
     switch (level) {
       case "high":
         return "bg-[#EF4444] text-white";
@@ -150,7 +131,107 @@ export function DocumentViewer({
     }
   };
 
-  // start scan na mount (tylko forward)
+  /* -----------------------------------------
+     Load latest contract analysis from backend
+  ------------------------------------------ */
+
+  useEffect(() => {
+    const loadLatestAnalysis = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1) Get list of contracts
+        const listRes = await fetch(`${API_BASE_URL}/api/contracts`);
+        if (!listRes.ok) {
+          throw new Error(`List request failed with status ${listRes.status}`);
+        }
+        const listJson: ContractListResponse = await listRes.json();
+
+        if (!listJson.items || listJson.items.length === 0) {
+          setAnalysis(null);
+          setDocumentText("");
+          setHighlights([]);
+          setSelectedIssue(null);
+          return;
+        }
+
+        const latest = listJson.items[listJson.items.length - 1];
+
+        // 2) Load full analysis for the latest contract
+        const detailRes = await fetch(
+          `${API_BASE_URL}/api/contracts/${latest.contractId}`
+        );
+        if (!detailRes.ok) {
+          throw new Error(
+            `Detail request failed with status ${detailRes.status}`
+          );
+        }
+        const detailJson: ContractAnalysis = await detailRes.json();
+        setAnalysis(detailJson);
+
+        // Build one big text blob from sections
+        const sections = detailJson.document?.sections ?? [];
+        let combined = "";
+        const sectionOffsets: number[] = [];
+
+        sections.forEach((s, idx) => {
+          sectionOffsets[idx] = combined.length;
+          combined += s.text ?? "";
+          if (idx < sections.length - 1) {
+            combined += "\n\n";
+          }
+        });
+
+        setDocumentText(combined);
+
+        // Build highlights from issues using snippet positions
+        const newHighlights: Highlight[] = [];
+        sections.forEach((section, sectionIndex) => {
+          const baseOffset = sectionOffsets[sectionIndex] ?? 0;
+          const sectionText = section.text ?? "";
+
+          section.issues?.forEach((issue) => {
+            if (!issue.snippet) return;
+            const localIndex = sectionText.indexOf(issue.snippet);
+            if (localIndex === -1) return;
+
+            const start = baseOffset + localIndex;
+            const end = start + issue.snippet.length;
+
+            newHighlights.push({
+              start,
+              end,
+              level: issue.severity,
+              text: issue.snippet,
+              riskId: issue.id,
+              issue,
+            });
+          });
+        });
+
+        setHighlights(newHighlights);
+        setSelectedIssue(newHighlights[0]?.issue ?? null);
+        setActiveHighlightIds([]); // reset active highlights for new doc
+      } catch (e) {
+        console.error(e);
+        setError("Failed to load document analysis from backend.");
+        setAnalysis(null);
+        setDocumentText("");
+        setHighlights([]);
+        setSelectedIssue(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLatestAnalysis();
+  }, []);
+
+  /* -----------------------------------------
+     Scanner animation (one forward pass)
+  ------------------------------------------ */
+
   useEffect(() => {
     const startScan = async () => {
       if (!containerRef.current) return;
@@ -168,10 +249,17 @@ export function DocumentViewer({
       setScanning(false);
     };
 
-    startScan();
-  }, [scannerAnimation]);
+    if (documentText) {
+      // rerun scan whenever we load a document
+      scannerAnimation.set({ x: "-90%" });
+      startScan();
+    }
+  }, [documentText, scannerAnimation]);
 
-  // live podświetlanie w trakcie skanu – od początku frazy
+  /* -----------------------------------------
+     Live highlight activation during scan
+  ------------------------------------------ */
+
   useEffect(() => {
     if (!scanning || !scannerRef.current || !contentRef.current) return;
 
@@ -184,7 +272,7 @@ export function DocumentViewer({
       const contentRect = contentRef.current.getBoundingClientRect();
       const scannerRightEdge = scannerRect.right - contentRect.left;
 
-      const newActive: number[] = [];
+      const newActive: string[] = [];
 
       highlights.forEach((h) => {
         const el = contentRef.current!.querySelector<HTMLSpanElement>(
@@ -194,6 +282,7 @@ export function DocumentViewer({
 
         const elRect = el.getBoundingClientRect();
         const elCenter = (elRect.left + elRect.right) / 2 - contentRect.left;
+
         if (elCenter <= scannerRightEdge) {
           newActive.push(h.riskId);
         }
@@ -211,10 +300,15 @@ export function DocumentViewer({
 
     frameId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameId);
-  }, [scanning]);
+  }, [scanning, highlights]);
 
-  // render tekstu + highlightów
+  /* -----------------------------------------
+     Render document with highlight spans
+  ------------------------------------------ */
+
   const renderDocumentWithHighlights = () => {
+    if (!documentText) return null;
+
     const parts: JSX.Element[] = [];
     let lastIndex = 0;
 
@@ -237,9 +331,7 @@ export function DocumentViewer({
           data-highlight-id={highlight.riskId}
           className={cn(
             "cursor-pointer px-1 rounded-sm transition-all duration-200",
-            // 🔴 dopóki skaner tu nie dojedzie – fraza wygląda jak normalny tekst
             !isActive && "text-[#D4D4DD]",
-            // po przejeździe skanera – pełen kolor + glow
             isActive &&
               cn(
                 getRiskColor(highlight.level),
@@ -247,7 +339,7 @@ export function DocumentViewer({
                 `border-[#FF3B3B]/50`
               )
           )}
-          onClick={() => setSelectedRisk(highlight.riskId)}
+          onClick={() => setSelectedIssue(highlight.issue)}
         >
           {highlight.text}
         </span>
@@ -267,19 +359,49 @@ export function DocumentViewer({
     return parts;
   };
 
-  const selectedRiskData = selectedRisk
-    ? riskDetails[selectedRisk as keyof typeof riskDetails]
-    : null;
+  /* -----------------------------------------
+     UI states
+  ------------------------------------------ */
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-4">
+        <p className="text-sm text-[#9A9AA2]">Loading document viewer…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-4">
+        <p className="text-sm text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!analysis || !documentText) {
+    return (
+      <div className="container mx-auto py-4">
+        <p className="text-sm text-[#9A9AA2]">
+          No analyzed contracts found. Upload and analyze a document first.
+        </p>
+      </div>
+    );
+  }
+
+  /* -----------------------------------------
+     Main layout
+  ------------------------------------------ */
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      {/* Document Viewer - Left Panel */}
+      {/* LEFT PANEL – DOCUMENT + SCANNER */}
       <div className="lg:col-span-2">
         <Card className="h-[800px] border-gray-800 bg-[#1a1a1a]">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">
-                Service Agreement Contract
+                {analysis.document?.title || analysis.fileName}
               </CardTitle>
               <div className="flex items-center gap-2 text-sm">
                 <div className="h-3 w-3 rounded bg-[#FF3B3B]" />
@@ -291,20 +413,21 @@ export function DocumentViewer({
               </div>
             </div>
           </CardHeader>
+
           <CardContent>
             <ScrollArea className="h-[680px] pr-4">
               <div
                 ref={containerRef}
                 className="relative overflow-hidden rounded-lg border border-gray-800 bg-[#050509] p-6"
               >
-                {/* tekst kontraktu */}
+                {/* Contract text */}
                 <div ref={contentRef}>
                   <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed">
                     {renderDocumentWithHighlights()}
                   </pre>
                 </div>
 
-                {/* scanner overlay */}
+                {/* Scanner overlay */}
                 <motion.div
                   ref={scannerRef}
                   className="pointer-events-none absolute -top-8 left-0 h-[calc(100%+64px)]"
@@ -312,9 +435,8 @@ export function DocumentViewer({
                   animate={scannerAnimation}
                 >
                   <div className="flex h-full flex-row-reverse">
-                    {/* główna linia */}
                     <div className="h-full w-[6px] bg-gradient-to-b from-[#FF6666] via-[#FF2D2D] to-transparent shadow-[0_0_24px_rgba(255,45,45,0.9)]" />
-                    {/* ogon gradientu – zrobione w CSS, bez tailwind.config */}
+                    {/* tail gradient – implemented via custom CSS class */}
                     <div className="scan-gradient-bar h-full w-24" />
                   </div>
                 </motion.div>
@@ -324,26 +446,26 @@ export function DocumentViewer({
         </Card>
       </div>
 
-      {/* Risk Details Sidebar - Right Panel */}
+      {/* RIGHT PANEL – RISK DETAILS */}
       <div className="lg:col-span-1">
         <Card className="sticky top-6 border-gray-800 bg-[#1a1a1a]">
           <CardHeader>
             <CardTitle className="text-white">Risk Details</CardTitle>
           </CardHeader>
           <CardContent>
-            {selectedRiskData ? (
+            {selectedIssue ? (
               <div className="space-y-6">
                 <div>
                   <div className="mb-3 flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-[#EE0000]" />
-                    <Badge className={getBadgeColor(selectedRiskData.level)}>
-                      {selectedRiskData.level.toUpperCase()}
+                    <Badge className={getBadgeColor(selectedIssue.severity)}>
+                      {selectedIssue.severity.toUpperCase()}
                     </Badge>
                   </div>
-                  <h3 className="mb-2 text-white">{selectedRiskData.title}</h3>
-                  <p className="text-sm text-gray-400">
-                    {selectedRiskData.category}
-                  </p>
+                  <h3 className="mb-2 text-white">
+                    {selectedIssue.type || "Issue"}
+                  </h3>
+                  <p className="text-sm text-gray-400">Clause Risk</p>
                 </div>
 
                 <div>
@@ -352,19 +474,21 @@ export function DocumentViewer({
                     Explanation
                   </h4>
                   <p className="text-sm leading-relaxed text-gray-300">
-                    {selectedRiskData.explanation}
+                    {selectedIssue.explanation}
                   </p>
                 </div>
 
-                <div className="rounded-lg border border-gray-800 bg-[#0f0f0f] p-4">
-                  <h4 className="mb-2 flex items-center gap-2 text-white">
-                    <Lightbulb className="h-4 w-4 text-[#F59E0B]" />
-                    Suggested Fix
-                  </h4>
-                  <p className="mb-4 text-sm leading-relaxed text-gray-300">
-                    {selectedRiskData.suggestion}
-                  </p>
-                </div>
+                {selectedIssue.suggestedFix && (
+                  <div className="rounded-lg border border-gray-800 bg-[#0f0f0f] p-4">
+                    <h4 className="mb-2 flex items-center gap-2 text-white">
+                      <Lightbulb className="h-4 w-4 text-[#F59E0B]" />
+                      Suggested Fix
+                    </h4>
+                    <p className="mb-4 text-sm leading-relaxed text-gray-300">
+                      {selectedIssue.suggestedFix}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-12 text-center">

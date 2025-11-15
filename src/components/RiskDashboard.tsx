@@ -187,88 +187,6 @@ export function RiskDashboard({ handleSwitchToViewer }: RiskDashboardProps) {
 
   return (
     <div className="container mx-auto py-2 space-y-8">
-      {/* Summary cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-[#1A1A1D] to-[#240000] border border-[#262629]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
-              Overall risk score
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF2D2D]/10">
-              <AlertTriangle className="h-4 w-4 text-[#FF7A7A]" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-[#FF7A7A]">
-                {analysis.summary.riskScore}
-              </span>
-              <span className="text-xs text-[#9A9AA2]">/ 100</span>
-            </div>
-            <p className="mt-2 text-xs text-[#9A9AA2]">
-              {analysis.summary.recommendation}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1D] border border-[#262629]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
-              Risk distribution
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7B61FF]/15">
-              <FileText className="h-4 w-4 text-[#B4A6FF]" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-8">
-              <div>
-                <p className="text-xs text-[#9A9AA2]">High</p>
-                <p className="text-lg font-semibold text-[#FF7A7A]">
-                  {highRiskCount}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-[#9A9AA2]">Medium</p>
-                <p className="text-lg font-semibold text-[#FBBF24]">
-                  {mediumRiskCount}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-[#9A9AA2]">Low</p>
-                <p className="text-lg font-semibold text-[#A3E635]">
-                  {lowRiskCount}
-                </p>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-[#555565]">
-              Distribution of clause-level risks across the entire contract.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1D] border border-[#262629]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#E6E6E9]">
-              AI confidence & signal
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#059669]/10">
-              <Activity className="h-4 w-4 text-[#34D399]" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-[#34D399]">89%</span>
-              <span className="text-xs text-[#9A9AA2]">confidence</span>
-            </div>
-            <p className="mt-2 text-xs text-[#9A9AA2]">
-              Model calibrated on synthetic legal datasets and internal
-              benchmarks.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Risk list */}
       <Card className="bg-[#1A1A1D] border border-[#262629]">
         <CardHeader>
@@ -278,9 +196,7 @@ export function RiskDashboard({ handleSwitchToViewer }: RiskDashboardProps) {
             </CardTitle>
             <Select
               value={filterLevel}
-              onValueChange={(val) =>
-                setFilterLevel(val as "all" | RiskLevel)
-              }
+              onValueChange={(val) => setFilterLevel(val as "all" | RiskLevel)}
             >
               <SelectTrigger className="w-40 bg-[#0D0D0F] border-[#262629] text-xs text-[#E6E6E9]">
                 <div className="flex w-full items-center justify-between">
