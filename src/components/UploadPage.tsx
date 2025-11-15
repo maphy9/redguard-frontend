@@ -86,6 +86,8 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          <HoloScanOverlay active={isUploading} />
+
           <input
             type="file"
             id="file-upload"
@@ -96,7 +98,7 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
 
           <label
             htmlFor="file-upload"
-            className="cursor-pointer flex flex-col items-center justify-center text-center"
+            className="relative z-10 flex cursor-pointer flex-col items-center justify-center text-center"
           >
             <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#1A1A1D] shadow-[0_14px_30px_rgba(0,0,0,0.9)] border border-[#262629]">
               <Upload className="w-10 h-10 text-[#FF3A3A]" />
@@ -127,7 +129,7 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
           </label>
 
           {/* Format badges */}
-          <div className="mt-6 flex justify-center gap-3">
+          <div className="relative z-10 mt-6 flex justify-center gap-3">
             {["PDF", "TXT", "DOCX"].map((fmt) => (
               <span
                 key={fmt}
@@ -180,6 +182,47 @@ export function UploadPage({ onDocumentUploaded }: UploadPageProps) {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+function HoloScanOverlay({ active }: { active: boolean }) {
+  if (!active) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+      {/* central red vignette – jak na mockupie */}
+      <div
+        className="absolute inset-0 opacity-90 mix-blend-screen
+                   bg-[radial-gradient(circle_at_center,_rgba(255,45,45,0.55),_rgba(13,13,15,0.4)_55%,_rgba(13,13,15,0.95)_100%)]"
+      />
+
+      {/* mocniejszy pionowy laser */}
+      <div
+        className="holo-scan-line absolute top-0 left-1/2 h-[55%] w-[72%]
+                   -translate-x-1/2 rounded-full
+                   bg-[radial-gradient(circle_at_center,_rgba(255,71,71,0.9),_rgba(255,45,45,0.1)_60%,_transparent_100%)]"
+      />
+
+      {/* główny pierścień wokół ikony */}
+      <div
+        className="holo-ring absolute left-1/2 top-[44%] h-48 w-48 -translate-x-1/2 rounded-full
+                   border border-[#FF2D2D]/70
+                   shadow-[0_0_120px_rgba(255,45,45,0.85)]"
+      />
+
+      {/* wewnętrzny ring dla głębi */}
+      <div
+        className="absolute left-1/2 top-[44%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full
+                   border border-[#FF7A7A]/50
+                   shadow-[0_0_60px_rgba(255,71,71,0.7)] opacity-80"
+      />
+
+      {/* bardziej widoczny przepływ danych */}
+      <div
+        className="holo-data-flow absolute bottom-8 left-8 right-8 h-[2px]
+                   bg-gradient-to-r from-transparent via-[#FF2D2D] to-transparent
+                   shadow-[0_0_40px_rgba(255,45,45,0.9)]"
+      />
     </div>
   );
 }

@@ -189,3 +189,65 @@
 html {
   font-size: var(--font-size);
 }
+@keyframes holo-scan-line {
+  0% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes holo-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0;
+  }
+}
+
+@keyframes holo-data-flow {
+  0% {
+    transform: translateX(-20%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+.holo-scan-line {
+  animation: holo-scan-line 2.4s ease-in-out infinite;
+}
+
+.holo-ring {
+  animation: holo-ring 3.2s ease-out infinite;
+}
+
+.holo-data-flow {
+  animation: holo-data-flow 2.6s linear infinite;
+}
